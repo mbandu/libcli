@@ -38,6 +38,8 @@
 #define MATCH_REGEX 1
 #define MATCH_INVERT 2
 
+#define STRICT_CONFIG_MODE // restrict config mode command not to run on sub config mode.
+
 #ifdef WIN32
 // Stupid windows has multiple namespaces for filedescriptors, with different read/write functions required for each ..
 int read(int fd, void *buf, unsigned int count) {
@@ -259,8 +261,7 @@ void cli_allow_user(struct cli_def *cli, const char *username, const char *passw
   if (!cli->users) {
     cli->users = n;
   } else {
-    for (u = cli->users; u && u->next; u = u->next)
-      ;
+    for (u = cli->users; u && u->next; u = u->next);
     if (u) u->next = n;
   }
 }
@@ -411,8 +412,7 @@ struct cli_command *cli_register_command_core(struct cli_def *cli, struct cli_co
   /*
    * If we have a chain (p is not null), run down to the last element and place this command at the end
    */
-  for (; p && p->next; p = p->next)
-    ;
+  for (; p && p->next; p = p->next);
 
   if (p) {
     p->next = c;
@@ -2287,8 +2287,7 @@ int cli_unregister_optarg(struct cli_command *cmd, const char *name) {
   struct cli_optarg *lastptr;
   int retval = CLI_ERROR;
   // Iterate looking for this option name, stopping at end or if name matches
-  for (lastptr = NULL, ptr = cmd->optargs; ptr && strcmp(ptr->name, name); lastptr = ptr, ptr = ptr->next)
-    ;
+  for (lastptr = NULL, ptr = cmd->optargs; ptr && strcmp(ptr->name, name); lastptr = ptr, ptr = ptr->next);
 
   // If ptr, then we found the optarg to delete
   if (ptr) {
@@ -2426,8 +2425,7 @@ int cli_int_enter_buildmode(struct cli_def *cli, struct cli_pipeline_stage *stag
   // Currently we only allow a single entry point to a buildmode, so advance t that
   // optarg and proceed from there.
   for (buildmodeOptarg = stage->command->optargs;
-       buildmodeOptarg && !(buildmodeOptarg->flags & CLI_CMD_ALLOW_BUILDMODE); buildmodeOptarg = buildmodeOptarg->next)
-    ;
+       buildmodeOptarg && !(buildmodeOptarg->flags & CLI_CMD_ALLOW_BUILDMODE); buildmodeOptarg = buildmodeOptarg->next);
 
   // Now start at this argument and flesh out the rest of the commands available for this buildmode
   for (optarg = buildmodeOptarg; optarg; optarg = optarg->next) {
@@ -2516,13 +2514,12 @@ int cli_int_unregister_buildmode_command(struct cli_def *cli, const char *comman
 }
 
 // recoded to find first '\v', otherwise first NULL, instead of using GNU extension strchrnul()
-char *local_strchrnul(const char *src, char target)
-{
-  char *found=NULL;
-  if ((found=strchr(src, target))) {
+char *local_strchrnul(const char *src, char target) {
+  char *found = NULL;
+  if ((found = strchr(src, target))) {
     return found;
   }
-  return strchr(src,'\0');
+  return strchr(src, '\0');
 }
 
 struct cli_command *cli_int_register_buildmode_command(struct cli_def *cli, struct cli_command *parent,
@@ -2664,8 +2661,7 @@ void cli_int_buildmode_reset_unset_help(struct cli_def *cli) {
 
   if (cmd) {
     struct cli_optarg *optarg;
-    for (optarg = cmd->optargs; optarg && strcmp(optarg->name, "setting"); optarg = optarg->next)
-      ;
+    for (optarg = cmd->optargs; optarg && strcmp(optarg->name, "setting"); optarg = optarg->next);
 
     if (optarg) {
       char *endOfMainHelp;
@@ -2928,9 +2924,11 @@ static int cli_int_locate_command(struct cli_def *cli, struct cli_command *comma
         rc = stage->status;
       }
       return rc;
+#ifndef STRICT_CONFIG_MODE // restrict config mode command not to run on sub config mode.
     } else if (cli->mode > MODE_CONFIG && c->mode == MODE_CONFIG) {
       // Command matched but from another mode, remember it if we fail to find correct command
       again_config = c;
+#endif  // STRICT_CONFIG_MODE
     } else if (c->mode == MODE_ANY) {
       // Command matched but for any mode, remember it if we fail to find correct command
       again_any = c;
